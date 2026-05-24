@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   CreateProjectModal — Minimal futuristic modal
-   for creating a new project
+   CreateProjectModal — Create a new knowledge workspace
    ═══════════════════════════════════════════════════════ */
 
 import { useState, useRef, useEffect } from 'react';
@@ -37,55 +36,62 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Props)
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ zIndex: 50 }}
+          style={{
+            position: 'fixed', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 'var(--z-modal)' as never,
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.18 }}
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0"
-            style={{ background: 'rgba(6, 6, 14, 0.8)', backdropFilter: 'blur(8px)' }}
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(6px)',
+            }}
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           />
 
-          {/* Modal */}
+          {/* Panel */}
           <motion.div
-            className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(145deg, rgba(26,26,46,0.95), rgba(17,17,32,0.98))',
-              border: '1px solid rgba(255,105,180,0.15)',
-              boxShadow: '0 0 60px rgba(255,105,180,0.08), 0 25px 50px rgba(0,0,0,0.5)',
+              position: 'relative',
+              width: 'min(480px, 92vw)',
+              background: 'var(--void-3)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-xl)',
+              padding: 'var(--sp-8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--sp-5)',
+              zIndex: 1,
             }}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 10, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            <form onSubmit={handleSubmit} className="p-8">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-5)' }}>
+
               {/* Header */}
-              <div className="mb-8">
-                <h2
-                  className="font-display text-xl font-semibold mb-1"
-                  style={{ color: 'var(--text-primary)' }}
-                >
+              <div>
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-medium)', color: 'var(--text-primary)', marginBottom: 'var(--sp-1)' }}>
                   New Project
                 </h2>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                   Create a knowledge workspace
                 </p>
               </div>
 
-              {/* Name input */}
-              <div className="mb-5">
-                <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                  Project Name
-                </label>
+              {/* Name */}
+              <ModalField label="Project Name">
                 <input
                   ref={inputRef}
                   type="text"
@@ -93,78 +99,71 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Props)
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Frontend Mastery"
                   maxLength={50}
-                  className="w-full px-4 py-3 rounded-xl text-sm font-body outline-none transition-all duration-200"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'rgba(255,105,180,0.4)';
-                    e.target.style.boxShadow = '0 0 20px rgba(255,105,180,0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  style={modalInputStyle}
+                  onFocus={(e) => modalFocus(e.target as HTMLInputElement)}
+                  onBlur={(e) => modalBlur(e.target as HTMLInputElement)}
                 />
-              </div>
+              </ModalField>
 
-              {/* Description input */}
-              <div className="mb-8">
-                <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                  Description <span style={{ color: 'var(--text-muted)' }}>(optional)</span>
-                </label>
+              {/* Description */}
+              <ModalField label={<>Description <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-normal)', letterSpacing: 0 }}>(optional)</span></>}>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What will you explore?"
                   maxLength={200}
                   rows={2}
-                  className="w-full px-4 py-3 rounded-xl text-sm font-body outline-none resize-none transition-all duration-200"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'rgba(255,105,180,0.4)';
-                    e.target.style.boxShadow = '0 0 20px rgba(255,105,180,0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  style={{ ...modalInputStyle, resize: 'none' }}
+                  onFocus={(e) => modalFocus(e.target as unknown as HTMLInputElement)}
+                  onBlur={(e) => modalBlur(e.target as unknown as HTMLInputElement)}
                 />
-              </div>
+              </ModalField>
 
               {/* Actions */}
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl font-medium cursor-pointer transition-colors duration-200"
-                  style={{ fontSize: '14px', minHeight: '40px', color: 'var(--text-secondary)' }}
-                >
-                  Cancel
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', paddingTop: 'var(--sp-2)' }}>
                 <button
                   type="submit"
                   disabled={!name.trim()}
-                  className="px-6 py-2.5 rounded-xl font-semibold cursor-pointer transition-all duration-200 font-display"
                   style={{
-                    fontSize: '14px',
-                    minHeight: '40px',
-                    background: name.trim()
-                      ? 'linear-gradient(135deg, #ff69b4, #c44b8b)'
-                      : 'rgba(255,255,255,0.05)',
+                    width: '100%', height: 46,
+                    background: name.trim() ? 'var(--pink)' : 'var(--surface)',
                     color: name.trim() ? '#fff' : 'var(--text-muted)',
-                    boxShadow: name.trim() ? '0 0 25px rgba(255,105,180,0.3)' : 'none',
+                    border: 'none',
+                    borderRadius: 'var(--r-full)',
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--fw-medium)',
+                    boxShadow: name.trim() ? 'var(--pink-glow)' : 'none',
+                    transition: 'all var(--t-base) var(--ease)',
+                    cursor: name.trim() ? 'pointer' : 'default',
                     opacity: name.trim() ? 1 : 0.5,
                   }}
+                  onMouseEnter={(e) => {
+                    if (name.trim()) {
+                      (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)';
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.filter = 'none';
+                    (e.currentTarget as HTMLElement).style.transform = 'none';
+                  }}
                 >
-                  Create
+                  Create Project
                 </button>
+                <span
+                  onClick={onClose}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'color var(--t-base) var(--ease)',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
+                >
+                  Cancel
+                </span>
               </div>
             </form>
           </motion.div>
@@ -172,4 +171,37 @@ export default function CreateProjectModal({ isOpen, onClose, onCreate }: Props)
       )}
     </AnimatePresence>
   );
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function ModalField({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+      <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+const modalInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--r-md)',
+  padding: 'var(--sp-3) var(--sp-4)',
+  fontSize: 'var(--text-base)',
+  color: 'var(--text-primary)',
+  outline: 'none',
+  transition: 'border-color var(--t-fast), box-shadow var(--t-fast)',
+};
+
+function modalFocus(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--pink)';
+  el.style.boxShadow = '0 0 0 3px var(--pink-dim)';
+}
+function modalBlur(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--border)';
+  el.style.boxShadow = 'none';
 }

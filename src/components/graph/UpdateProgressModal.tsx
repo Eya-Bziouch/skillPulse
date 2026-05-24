@@ -1,8 +1,5 @@
 /* ═══════════════════════════════════════════════════════
    UpdateProgressModal — Quick "what did you just learn?"
-   
-   Lightweight modal for rapidly logging a new concept
-   and connecting it to the most-recent / selected node.
    ═══════════════════════════════════════════════════════ */
 
 import { useState, useRef, useEffect } from 'react';
@@ -17,8 +14,8 @@ interface Props {
 }
 
 const NODE_TYPES: { value: NodeType; label: string; icon: string }[] = [
-  { value: 'concept', label: 'Concept', icon: '◆' },
-  { value: 'resource', label: 'Resource', icon: '◈' },
+  { value: 'concept',   label: 'Concept',   icon: '◆' },
+  { value: 'resource',  label: 'Resource',  icon: '◈' },
   { value: 'milestone', label: 'Milestone', icon: '★' },
 ];
 
@@ -48,55 +45,59 @@ export default function UpdateProgressModal({ isOpen, onClose, onCreate }: Props
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ zIndex: 50 }}
+          style={{
+            position: 'fixed', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 'var(--z-modal)' as never,
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0"
-            style={{ background: 'rgba(6, 6, 14, 0.75)', backdropFilter: 'blur(8px)' }}
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(6px)',
+            }}
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Panel */}
           <motion.div
-            className="relative w-full max-w-sm mx-4 rounded-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(145deg, rgba(26,26,46,0.97), rgba(17,17,32,0.99))',
-              border: '1px solid rgba(255,105,180,0.15)',
-              boxShadow: '0 0 60px rgba(255,105,180,0.08), 0 25px 50px rgba(0,0,0,0.6)',
-              minWidth: 340,
+              position: 'relative',
+              width: 'min(480px, 92vw)',
+              background: 'var(--void-3)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-xl)',
+              padding: 'var(--sp-8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--sp-5)',
+              zIndex: 1,
             }}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 10, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            <form onSubmit={handleSubmit} className="p-7">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-5)' }}>
+
               {/* Header */}
-              <div className="mb-6">
-                <h2
-                  className="font-display text-lg font-semibold mb-0.5"
-                  style={{ color: 'var(--text-primary)' }}
-                >
+              <div>
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-medium)', color: 'var(--text-primary)', marginBottom: 'var(--sp-1)' }}>
                   Update Progress
                 </h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                   Log a new concept and connect it to your chain
                 </p>
               </div>
 
-              {/* Label input */}
-              <div className="mb-5">
-                <label
-                  className="block font-medium uppercase tracking-wider mb-1.5"
-                  style={{ color: 'var(--text-secondary)', fontSize: '12px' }}
-                >
-                  What did you just learn?
-                </label>
+              {/* What did you learn? */}
+              <ModalField label="What did you just learn?">
                 <input
                   ref={inputRef}
                   type="text"
@@ -104,54 +105,32 @@ export default function UpdateProgressModal({ isOpen, onClose, onCreate }: Props
                   onChange={(e) => setLabel(e.target.value)}
                   placeholder="e.g. React Suspense"
                   maxLength={60}
-                  className="w-full px-4 py-3 rounded-xl outline-none transition-all"
-                  style={{
-                    fontSize: '14px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = 'rgba(255,105,180,0.4)';
-                    e.target.style.boxShadow = '0 0 20px rgba(255,105,180,0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-                    e.target.style.boxShadow = 'none';
-                  }}
+                  style={modalInputStyle}
+                  onFocus={(e) => modalFocus(e.target as HTMLInputElement)}
+                  onBlur={(e) => modalBlur(e.target as HTMLInputElement)}
                 />
-              </div>
+              </ModalField>
 
-              {/* Node type selector */}
-              <div className="mb-5">
-                <label
-                  className="block font-medium uppercase tracking-wider mb-1.5"
-                  style={{ color: 'var(--text-secondary)', fontSize: '12px' }}
-                >
-                  Type
-                </label>
-                <div className="flex gap-2">
+              {/* Type */}
+              <ModalField label="Type">
+                <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
                   {NODE_TYPES.map((t) => (
                     <button
                       key={t.value}
                       type="button"
                       onClick={() => setNodeType(t.value)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-medium cursor-pointer transition-all"
                       style={{
-                        fontSize: '14px',
-                        background:
-                          nodeType === t.value
-                            ? 'rgba(255,105,180,0.12)'
-                            : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${
-                          nodeType === t.value
-                            ? 'rgba(255,105,180,0.3)'
-                            : 'rgba(255,255,255,0.06)'
-                        }`,
-                        color:
-                          nodeType === t.value
-                            ? 'var(--accent-primary)'
-                            : 'var(--text-muted)',
+                        flex: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: 'var(--sp-2) var(--sp-3)',
+                        borderRadius: 'var(--r-full)',
+                        border: `1px solid ${nodeType === t.value ? 'var(--pink)' : 'var(--border)'}`,
+                        background: nodeType === t.value ? 'var(--pink-dim)' : 'var(--surface)',
+                        color: nodeType === t.value ? 'var(--pink)' : 'var(--text-secondary)',
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: nodeType === t.value ? 'var(--fw-medium)' : 'var(--fw-normal)',
+                        cursor: 'pointer',
+                        transition: 'all var(--t-base) var(--ease)',
                       }}
                     >
                       <span>{t.icon}</span>
@@ -159,66 +138,75 @@ export default function UpdateProgressModal({ isOpen, onClose, onCreate }: Props
                     </button>
                   ))}
                 </div>
-              </div>
+              </ModalField>
 
-              {/* Color picker */}
-              <div className="mb-7">
-                <label
-                  className="block font-medium uppercase tracking-wider mb-1.5"
-                  style={{ color: 'var(--text-secondary)', fontSize: '12px' }}
-                >
-                  Color
-                </label>
-                <div className="flex flex-wrap gap-2">
+              {/* Colour */}
+              <ModalField label="Color">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)' }}>
                   {SKILL_COLORS.map((c) => (
                     <button
                       key={c.value}
                       type="button"
                       onClick={() => setColor(c.value)}
                       title={c.name}
-                      className="w-7 h-7 rounded-full cursor-pointer transition-all"
                       style={{
-                        background: c.value,
-                        boxShadow:
-                          color === c.value
-                            ? `0 0 12px ${c.value}, 0 0 0 2px rgba(255,255,255,0.25)`
-                            : 'none',
-                        transform: color === c.value ? 'scale(1.2)' : 'scale(1)',
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: c.value, border: 'none', cursor: 'pointer',
+                        transition: 'all var(--t-base) var(--ease)',
+                        outline: color === c.value ? '2px solid #fff' : 'none',
+                        outlineOffset: color === c.value ? '2px' : '0',
+                        transform: color === c.value ? 'scale(1.15)' : 'scale(1)',
                       }}
                     />
                   ))}
                 </div>
-              </div>
+              </ModalField>
 
               {/* Actions */}
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl cursor-pointer"
-                  style={{ fontSize: '14px', minHeight: '40px', color: 'var(--text-secondary)' }}
-                >
-                  Cancel
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', paddingTop: 'var(--sp-2)' }}>
                 <button
                   type="submit"
                   disabled={!label.trim()}
-                  className="px-6 py-2.5 rounded-xl font-semibold font-display cursor-pointer transition-all"
                   style={{
-                    fontSize: '14px',
-                    minHeight: '40px',
-                    background: label.trim()
-                      ? 'linear-gradient(135deg, #ff69b4, #c44b8b)'
-                      : 'rgba(255,255,255,0.05)',
+                    width: '100%', height: 46,
+                    background: label.trim() ? 'var(--pink)' : 'var(--surface)',
                     color: label.trim() ? '#fff' : 'var(--text-muted)',
-                    boxShadow: label.trim()
-                      ? '0 0 25px rgba(255,105,180,0.3)'
-                      : 'none',
+                    border: 'none',
+                    borderRadius: 'var(--r-full)',
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--fw-medium)',
+                    boxShadow: label.trim() ? 'var(--pink-glow)' : 'none',
+                    transition: 'all var(--t-base) var(--ease)',
+                    cursor: label.trim() ? 'pointer' : 'default',
                     opacity: label.trim() ? 1 : 0.5,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (label.trim()) {
+                      (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)';
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.filter = 'none';
+                    (e.currentTarget as HTMLElement).style.transform = 'none';
                   }}
                 >
                   Save & Connect
                 </button>
+                <span
+                  onClick={onClose}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'color var(--t-base) var(--ease)',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
+                >
+                  Cancel
+                </span>
               </div>
             </form>
           </motion.div>
@@ -226,4 +214,36 @@ export default function UpdateProgressModal({ isOpen, onClose, onCreate }: Props
       )}
     </AnimatePresence>
   );
+}
+
+function ModalField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+      <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+const modalInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--r-md)',
+  padding: 'var(--sp-3) var(--sp-4)',
+  fontSize: 'var(--text-base)',
+  color: 'var(--text-primary)',
+  outline: 'none',
+  transition: 'border-color var(--t-fast), box-shadow var(--t-fast)',
+};
+
+function modalFocus(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--pink)';
+  el.style.boxShadow = '0 0 0 3px var(--pink-dim)';
+}
+function modalBlur(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--border)';
+  el.style.boxShadow = 'none';
 }

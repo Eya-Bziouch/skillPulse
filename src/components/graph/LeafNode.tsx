@@ -1,15 +1,18 @@
 /* ═══════════════════════════════════════════════════════
-   LeafNode — Child knowledge node (concept/resource/milestone)
-   
-   A smaller, pill-shaped node connected to a parent skill.
-   Floats gently, inherits a tint from its parent color,
-   and glows proportionally to its energy level.
+   LeafNode — Child knowledge node (circular orb)
+
+   Type colour mapping:
+     concept  → blue/indigo gradient
+     resource → teal/green gradient
+     milestone → amber/orange gradient
+
+   Energy glow system via --node-energy CSS variable.
    ═══════════════════════════════════════════════════════ */
 
 import { memo, useMemo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { calculateEnergy, getGlowShadow } from '../../utils/energy';
+import { calculateEnergy } from '../../utils/energy';
 import type { NodeType } from '../../types';
 
 export interface LeafNodeData {
@@ -23,147 +26,118 @@ export interface LeafNodeData {
 
 type LeafNodeType = NodeProps & { data: LeafNodeData };
 
-/** Icon indicator based on node type */
-function NodeTypeIcon({ nodeType }: { nodeType: NodeType }) {
-  switch (nodeType) {
-    case 'concept':
-      return <span className="text-xs opacity-60 mr-1.5">◆</span>;
-    case 'resource':
-      return <span className="text-xs opacity-60 mr-1.5">◈</span>;
-    case 'milestone':
-      return <span className="text-xs opacity-60 mr-1.5">★</span>;
-    default:
-      return null;
-  }
-}
+const TYPE_GRADIENTS: Record<string, string> = {
+  concept:   'radial-gradient(circle at 38% 35%, #4a3ab8, #221860)',
+  resource:  'radial-gradient(circle at 38% 35%, #1a8a6a, #0a4035)',
+  milestone: 'radial-gradient(circle at 38% 35%, #c88020, #7a4a08)',
+  root:      'radial-gradient(circle at 38% 35%, #c03070, #7a1040)',
+};
 
 function LeafNodeComponent({ data, selected }: LeafNodeType) {
   const energy = useMemo(() => calculateEnergy(data.updatedAt), [data.updatedAt]);
-  const glowShadow = useMemo(() => getGlowShadow(data.color, energy), [data.color, energy]);
+  const bg = TYPE_GRADIENTS[data.nodeType] ?? TYPE_GRADIENTS.concept;
 
-  // Randomized float delay for organic feel
-  const floatDelay = useMemo(() => Math.random() * 3, []);
+  const energyGlow = useMemo(() => {
+    const e = energy.level;
+    // Use the node's custom color for the glow
+    const r = parseInt(data.color.slice(1, 3), 16) || 80;
+    const g = parseInt(data.color.slice(3, 5), 16) || 80;
+    const b = parseInt(data.color.slice(5, 7), 16) || 200;
+    return [
+      `0 0 ${e * 32}px rgba(${r},${g},${b},${e * 0.65})`,
+      `inset 0 1px 0 rgba(255,255,255,0.14)`,
+    ].join(', ');
+  }, [energy.level, data.color]);
+
+  const diameter = 'calc(var(--node-r) * 2)';
 
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Subtle glow behind the pill */}
-      <motion.div
-        className="absolute rounded-full"
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+
+      {/* Outer static ring — subtle opacity */}
+      <div
         style={{
-          width: '120%',
-          height: '150%',
-          background: `radial-gradient(ellipse, ${data.color}10 0%, transparent 70%)`,
-        }}
-        animate={{
-          opacity: [0.3, 0.6, 0.3],
-        }}
-        transition={{
-          duration: energy.pulseSpeed * 1.5,
-          repeat: Infinity,
-          ease: 'easeInOut',
+          position: 'absolute',
+          width: diameter,
+          height: diameter,
+          borderRadius: '50%',
+          border: `1.5px solid rgba(255,255,255,${0.08 + energy.level * 0.12})`,
+          transform: 'scale(1.18)',
+          pointerEvents: 'none',
         }}
       />
 
-      {/* Main pill body */}
-      <motion.div
-        className="relative flex items-center gap-0.5 rounded-full cursor-pointer select-none"
-        style={{
-          padding: '8px 18px',
-          background: `linear-gradient(135deg, ${data.color}22 0%, ${data.color}11 100%)`,
-          border: `1px solid ${data.color}${Math.round(energy.level * 60 + 15).toString(16).padStart(2, '0')}`,
-          boxShadow: glowShadow,
-          opacity: energy.opacity,
-          backdropFilter: 'blur(8px)',
-        }}
-        animate={{
-          y: [0, -3, 0],
-        }}
-        transition={{
-          duration: 4 + Math.random() * 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: floatDelay,
-        }}
-        whileHover={{
-          scale: 1.08,
-          borderColor: `${data.color}88`,
-        }}
-      >
-        {/* Living dot indicator */}
+      {/* Selected ring */}
+      {selected && (
         <motion.div
-          className="rounded-full mr-2 flex-shrink-0"
           style={{
-            width: 6,
-            height: 6,
-            background: data.color,
-            boxShadow: `0 0 6px ${data.color}`,
+            position: 'absolute',
+            width: diameter,
+            height: diameter,
+            borderRadius: '50%',
+            border: '2px solid var(--pink)',
+            pointerEvents: 'none',
           }}
-          animate={{
-            opacity: [0.5, 1, 0.5],
-            scale: [0.8, 1.1, 0.8],
-          }}
-          transition={{
-            duration: energy.pulseSpeed,
-            repeat: Infinity,
-            ease: 'easeInOut',
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+          initial={{ scale: 1.25 }}
+        />
+      )}
+
+      {/* Main orb body */}
+      <motion.div
+        style={{
+          width: diameter,
+          height: diameter,
+          borderRadius: '50%',
+          background: bg,
+          boxShadow: energyGlow,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          position: 'relative',
+          transition: `transform var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease)`,
+        }}
+        whileHover={{ scale: 1.08, boxShadow: 'var(--pink-glow)' }}
+      >
+        {/* Glass specular highlight */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 32% 28%, rgba(255,255,255,0.15) 0%, transparent 55%)',
+            pointerEvents: 'none',
           }}
         />
 
-        <NodeTypeIcon nodeType={data.nodeType} />
-
+        {/* Label */}
         <span
-          className="font-body font-medium"
           style={{
             fontSize: 'var(--node-font)',
-            color: data.color,
-            textShadow: `0 0 10px ${data.color}40`,
-            whiteSpace: 'nowrap',
+            fontWeight: 'var(--fw-medium)',
+            color: '#fff',
+            textAlign: 'center',
+            lineHeight: 1.2,
+            padding: '0 8px',
+            wordBreak: 'break-word',
+            maxWidth: 'calc(var(--node-r) * 1.6)',
+            textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+            position: 'relative',
+            zIndex: 1,
+            userSelect: 'none',
           }}
         >
           {data.label}
         </span>
       </motion.div>
 
-      {/* Selection ring */}
-      {selected && (
-        <motion.div
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            inset: -4,
-            border: `2px solid ${data.color}`,
-            borderRadius: 9999,
-          }}
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 0.6, scale: 1 }}
-          transition={{ duration: 0.2 }}
-        />
-      )}
-
       {/* Handles */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!bg-transparent !border-0"
-        style={{ top: -3 }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-transparent !border-0"
-        style={{ bottom: -3 }}
-      />
-      <Handle
-        type="target"
-        id="left"
-        position={Position.Left}
-        className="!bg-transparent !border-0"
-      />
-      <Handle
-        type="target"
-        id="right"
-        position={Position.Right}
-        className="!bg-transparent !border-0"
-      />
+      <Handle type="target" position={Position.Top} className="!bg-transparent !border-0" style={{ top: -3 }} />
+      <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-0" style={{ bottom: -3 }} />
+      <Handle type="target" id="left" position={Position.Left} className="!bg-transparent !border-0" />
+      <Handle type="target" id="right" position={Position.Right} className="!bg-transparent !border-0" />
     </div>
   );
 }

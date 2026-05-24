@@ -31,7 +31,7 @@ interface GraphState {
   unloadProject: () => void;
 
   addRootSkill: (title: string, color: string) => Promise<void>;
-  addChildNode: (parentId: string, title: string, nodeType: NodeType) => Promise<void>;
+  addChildNode: (parentId: string, title: string, nodeType: NodeType, color: string) => Promise<void>;
   updateSkill: (id: string, updates: Partial<Pick<SkillNode, 'title' | 'description' | 'tags' | 'color'>>) => Promise<void>;
   deleteSkill: (id: string) => Promise<void>;
   updateProgress: (label: string, nodeType: NodeType, color: string) => Promise<void>;
@@ -135,7 +135,7 @@ export const useGraph = create<GraphState>((set, get) => ({
     });
   },
 
-  addChildNode: async (parentId, title, nodeType) => {
+  addChildNode: async (parentId, title, nodeType, color) => {
     const { projectId, skills } = get();
     if (!projectId) return;
 
@@ -149,7 +149,7 @@ export const useGraph = create<GraphState>((set, get) => ({
     const x = parent.positionX + Math.cos(angle) * dist;
     const y = parent.positionY + Math.sin(angle) * dist;
 
-    const node = await ops.createSkillNode(projectId, title, parentId, nodeType, { x, y }, parent.color);
+    const node = await ops.createSkillNode(projectId, title, parentId, nodeType, { x, y }, color);
     const updatedSkills = [...skills, node];
     set({
       skills: updatedSkills,

@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   AddSkillModal — Quick modal to add a new root skill
-   or a child skill inside the graph workspace
+   AddSkillModal — Add root skill or child node
    ═══════════════════════════════════════════════════════ */
 
 import { useState, useRef, useEffect } from 'react';
@@ -17,8 +16,8 @@ interface Props {
 }
 
 const CHILD_TYPES: { value: NodeType; label: string; icon: string }[] = [
-  { value: 'concept', label: 'Concept', icon: '◆' },
-  { value: 'resource', label: 'Resource', icon: '◈' },
+  { value: 'concept',   label: 'Concept',   icon: '◆' },
+  { value: 'resource',  label: 'Resource',  icon: '◈' },
   { value: 'milestone', label: 'Milestone', icon: '★' },
 ];
 
@@ -48,48 +47,58 @@ export default function AddSkillModal({ isOpen, mode, parentLabel, onClose, onCr
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ zIndex: 50 }}
+          style={{
+            position: 'fixed', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 'var(--z-modal)' as never,
+          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0"
-            style={{ background: 'rgba(6, 6, 14, 0.75)', backdropFilter: 'blur(8px)' }}
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(6px)',
+            }}
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Panel */}
           <motion.div
-            className="relative w-full max-w-sm mx-4 rounded-2xl overflow-hidden"
             style={{
-              background: 'linear-gradient(145deg, rgba(26,26,46,0.97), rgba(17,17,32,0.99))',
-              border: '1px solid rgba(255,105,180,0.15)',
-              boxShadow: '0 0 60px rgba(255,105,180,0.08), 0 25px 50px rgba(0,0,0,0.6)',
+              position: 'relative',
+              width: 'min(480px, 92vw)',
+              background: 'var(--void-3)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-xl)',
+              padding: 'var(--sp-8)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--sp-5)',
+              zIndex: 1,
             }}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 10, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            <form onSubmit={handleSubmit} className="p-7">
-              {/* Header */}
-              <div className="mb-6">
-                <h2 className="font-display text-lg font-semibold mb-0.5" style={{ color: 'var(--text-primary)' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-5)' }}>
+              {/* Title */}
+              <div>
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--fw-medium)', color: 'var(--text-primary)', marginBottom: 'var(--sp-1)' }}>
                   {mode === 'root' ? 'Add Root Skill' : `Add to "${parentLabel}"`}
                 </h2>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                   {mode === 'root' ? 'A new knowledge cluster' : 'A sub-concept or resource'}
                 </p>
               </div>
 
-              {/* Title */}
-              <div className="mb-5">
-                <label className="block text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Name
-                </label>
+              {/* Name */}
+              <ModalField label="Skill Name">
                 <input
                   ref={inputRef}
                   type="text"
@@ -97,34 +106,33 @@ export default function AddSkillModal({ isOpen, mode, parentLabel, onClose, onCr
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={mode === 'root' ? 'e.g. TypeScript' : 'e.g. Generics'}
                   maxLength={40}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = 'rgba(255,105,180,0.4)'; e.target.style.boxShadow = '0 0 20px rgba(255,105,180,0.1)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
+                  style={modalInputStyle}
+                  onFocus={(e) => modalFocus(e.target as HTMLInputElement)}
+                  onBlur={(e) => modalBlur(e.target as HTMLInputElement)}
                 />
-              </div>
+              </ModalField>
 
-              {/* Child type selector (only for child mode) */}
+              {/* Type (child only) */}
               {mode === 'child' && (
-                <div className="mb-5">
-                  <label className="block text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                    Type
-                  </label>
-                  <div className="flex gap-2">
+                <ModalField label="Type">
+                  <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
                     {CHILD_TYPES.map((t) => (
                       <button
                         key={t.value}
                         type="button"
                         onClick={() => setNodeType(t.value)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
                         style={{
-                          background: nodeType === t.value ? 'rgba(255,105,180,0.12)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${nodeType === t.value ? 'rgba(255,105,180,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                          color: nodeType === t.value ? 'var(--accent-primary)' : 'var(--text-muted)',
+                          flex: 1,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          padding: 'var(--sp-2) var(--sp-3)',
+                          borderRadius: 'var(--r-full)',
+                          border: `1px solid ${nodeType === t.value ? 'var(--pink)' : 'var(--border)'}`,
+                          background: nodeType === t.value ? 'var(--pink-dim)' : 'var(--surface)',
+                          color: nodeType === t.value ? 'var(--pink)' : 'var(--text-secondary)',
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: nodeType === t.value ? 'var(--fw-medium)' : 'var(--fw-normal)',
+                          cursor: 'pointer',
+                          transition: 'all var(--t-base) var(--ease)',
                         }}
                       >
                         <span>{t.icon}</span>
@@ -132,59 +140,76 @@ export default function AddSkillModal({ isOpen, mode, parentLabel, onClose, onCr
                       </button>
                     ))}
                   </div>
-                </div>
+                </ModalField>
               )}
 
-              {/* Color picker */}
-              <div className="mb-7">
-                <label className="block text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-                  Color
-                </label>
-                <div className="flex flex-wrap gap-2">
+              {/* Colour */}
+              <ModalField label="Color">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)' }}>
                   {SKILL_COLORS.map((c) => (
                     <button
                       key={c.value}
                       type="button"
                       onClick={() => setColor(c.value)}
                       title={c.name}
-                      className="w-6 h-6 rounded-full cursor-pointer transition-all"
                       style={{
-                        background: c.value,
-                        boxShadow: color === c.value
-                          ? `0 0 12px ${c.value}, 0 0 0 2px rgba(255,255,255,0.25)`
-                          : 'none',
-                        transform: color === c.value ? 'scale(1.2)' : 'scale(1)',
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: c.value, border: 'none', cursor: 'pointer',
+                        transition: 'all var(--t-base) var(--ease)',
+                        outline: color === c.value ? '2px solid #fff' : 'none',
+                        outlineOffset: color === c.value ? '2px' : '0',
+                        transform: color === c.value ? 'scale(1.15)' : 'scale(1)',
                       }}
                     />
                   ))}
                 </div>
-              </div>
+              </ModalField>
 
               {/* Actions */}
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl cursor-pointer"
-                  style={{ fontSize: '14px', minHeight: '40px', color: 'var(--text-secondary)' }}
-                >
-                  Cancel
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', paddingTop: 'var(--sp-2)' }}>
                 <button
                   type="submit"
                   disabled={!title.trim()}
-                  className="px-6 py-2.5 rounded-xl font-semibold font-display cursor-pointer transition-all"
                   style={{
-                    fontSize: '14px',
-                    minHeight: '40px',
-                    background: title.trim() ? 'linear-gradient(135deg, #ff69b4, #c44b8b)' : 'rgba(255,255,255,0.05)',
+                    width: '100%', height: 46,
+                    background: title.trim() ? 'var(--pink)' : 'var(--surface)',
                     color: title.trim() ? '#fff' : 'var(--text-muted)',
-                    boxShadow: title.trim() ? '0 0 25px rgba(255,105,180,0.3)' : 'none',
+                    border: 'none',
+                    borderRadius: 'var(--r-full)',
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--fw-medium)',
+                    boxShadow: title.trim() ? 'var(--pink-glow)' : 'none',
+                    transition: 'all var(--t-base) var(--ease)',
+                    cursor: title.trim() ? 'pointer' : 'default',
                     opacity: title.trim() ? 1 : 0.5,
                   }}
+                  onMouseEnter={(e) => {
+                    if (title.trim()) {
+                      (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)';
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.filter = 'none';
+                    (e.currentTarget as HTMLElement).style.transform = 'none';
+                  }}
                 >
-                  Add
+                  Add Skill
                 </button>
+                <span
+                  onClick={onClose}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-secondary)',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'color var(--t-base) var(--ease)',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
+                >
+                  Cancel
+                </span>
               </div>
             </form>
           </motion.div>
@@ -192,4 +217,37 @@ export default function AddSkillModal({ isOpen, mode, parentLabel, onClose, onCr
       )}
     </AnimatePresence>
   );
+}
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function ModalField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+      <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--fw-bold)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+const modalInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--r-md)',
+  padding: 'var(--sp-3) var(--sp-4)',
+  fontSize: 'var(--text-base)',
+  color: 'var(--text-primary)',
+  outline: 'none',
+  transition: 'border-color var(--t-fast), box-shadow var(--t-fast)',
+};
+
+function modalFocus(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--pink)';
+  el.style.boxShadow = '0 0 0 3px var(--pink-dim)';
+}
+function modalBlur(el: HTMLInputElement) {
+  el.style.borderColor = 'var(--border)';
+  el.style.boxShadow = 'none';
 }

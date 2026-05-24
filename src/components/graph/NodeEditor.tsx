@@ -1,16 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   NodeEditor — Slide-in sidebar for editing a skill node
+   NodeEditor — 340px slide-in sidebar
 
-   Shows when a node is selected. Allows:
-     - Rename the skill
-     - Change description
-     - Change node type
-     - Change color
-     - Add a timeline event (journal entry)
-     - Delete the node
+   Layout: flex column, header + scrollable body + sticky footer
+   Sidebar slides in from right; canvas shrinks to accommodate it
+   (see Project.tsx flex-row layout).
    ═══════════════════════════════════════════════════════ */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGraph } from '../../store/useGraph';
 import { addTimelineEvent } from '../../db/operations';
@@ -19,9 +15,9 @@ import type { SkillNode, NodeType, TimelineEvent } from '../../types';
 import { SKILL_COLORS } from '../../utils/energy';
 
 const NODE_TYPES: { value: NodeType; label: string; icon: string }[] = [
-  { value: 'root', label: 'Root', icon: '◎' },
-  { value: 'concept', label: 'Concept', icon: '◆' },
-  { value: 'resource', label: 'Resource', icon: '◈' },
+  { value: 'root',      label: 'Root',      icon: '◎' },
+  { value: 'concept',   label: 'Concept',   icon: '◆' },
+  { value: 'resource',  label: 'Resource',  icon: '◈' },
   { value: 'milestone', label: 'Milestone', icon: '★' },
 ];
 
@@ -37,13 +33,13 @@ export default function NodeEditor({ isOpen, nodeId, onClose }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [nodeType, setNodeType] = useState<NodeType>('concept');
-  const [color, setColor] = useState('#ff69b4');
+  const [color, setColor] = useState('#e0407b');
   const [note, setNote] = useState('');
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [saving, setSaving] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const wasOpenRef = useRef(false);
 
-  // Sync local state when selected node changes
   useEffect(() => {
     if (!nodeId) return;
     const found = skills.find((s) => s.id === nodeId) ?? null;
@@ -57,7 +53,6 @@ export default function NodeEditor({ isOpen, nodeId, onClose }: Props) {
     }
   }, [nodeId, skills]);
 
-  // Load timeline events
   useEffect(() => {
     if (!nodeId) { setEvents([]); return; }
     db.timeline.where('nodeId').equals(nodeId).sortBy('timestamp').then((evts) => {
@@ -65,19 +60,23 @@ export default function NodeEditor({ isOpen, nodeId, onClose }: Props) {
     });
   }, [nodeId, saving]);
 
-  // Auto-focus title when sidebar opens
+  // Auto-focus ONLY when the sidebar transitions from closed → open,
+  // NOT on every 'skill' update (which would steal focus from AddSkillModal).
   useEffect(() => {
-    if (isOpen && skill) {
-      setTimeout(() => titleRef.current?.focus(), 200);
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (justOpened && skill) {
+      setTimeout(() => titleRef.current?.focus(), 300);
     }
   }, [isOpen, skill]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!skill) return;
     setSaving(true);
     await updateSkill(skill.id, { title, description, color });
     setSaving(false);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skill, title, description, color, updateSkill]);
 
   const handleAddNote = async () => {
     if (!skill || !note.trim()) return;
@@ -97,278 +96,370 @@ export default function NodeEditor({ isOpen, nodeId, onClose }: Props) {
   return (
     <AnimatePresence>
       {isOpen && skill && (
-        <>
-          {/* Backdrop (transparent, just to catch outside clicks) */}
-          <motion.div
-            className="fixed inset-0 pointer-events-auto"
-            style={{ zIndex: 18 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Sidebar panel */}
-          <motion.div
-            className="fixed top-0 right-0 h-full flex flex-col pointer-events-auto"
-            style={{
-              minWidth: 340,
-              width: 380,
-              zIndex: 20,
-              background: 'linear-gradient(180deg, rgba(18,10,26,0.97) 0%, rgba(10,10,20,0.98) 100%)',
-              borderLeft: '1px solid rgba(255,105,180,0.12)',
-              boxShadow: '-20px 0 60px rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(20px)',
-            }}
-            initial={{ x: 380, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 380, opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* ── Header ──────────────────────────────────── */}
-            <div
-              className="flex items-center justify-between px-6 py-5"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-            >
-              <div className="flex items-center gap-2.5">
-                <motion.div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: color, boxShadow: `0 0 8px ${color}` }}
-                  animate={{ opacity: [0.6, 1, 0.6], scale: [0.85, 1.1, 0.85] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                />
-                <span className="font-display font-semibold" style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
-                  Edit Skill
-                </span>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg cursor-pointer transition-colors"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+        <motion.div
+          key="node-editor"
+          initial={{ x: 340 }}
+          animate={{ x: 0 }}
+          exit={{ x: 340 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            width: 340,
+            minWidth: 340,
+            maxWidth: 340,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(15,15,24,0.92)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderLeft: '1px solid var(--border)',
+            zIndex: 'var(--z-sidebar)' as never,
+            flexShrink: 0,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Header ──────────────────────────────────── */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 'var(--sp-5) var(--sp-6)',
+            borderBottom: '1px solid var(--border)',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
+              <div style={{
+                width: 10, height: 10, borderRadius: '50%',
+                background: color,
+                boxShadow: `0 0 8px ${color}`,
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--fw-medium)', color: 'var(--text-primary)' }}>
+                Edit Skill
+              </span>
             </div>
+            <button
+              onClick={onClose}
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-secondary)',
+                transition: 'all var(--t-base) var(--ease)',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--pink)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+              aria-label="Close editor"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
 
-            {/* ── Scrollable body ──────────────────────────── */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-5">
-              {/* Title */}
-              <Field label="Skill Name">
-                <input
-                  ref={titleRef}
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={handleSave}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                  className="w-full px-4 py-3 rounded-xl outline-none transition-all"
-                  style={{
-                    fontSize: '14px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-display)',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = 'rgba(255,105,180,0.4)'; }}
-                  onBlurCapture={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-                />
-              </Field>
+          {/* ── Scrollable Body ──────────────────────────── */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: 'var(--sp-6)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--sp-5)',
+          }}>
 
-              {/* Node type */}
-              <Field label="Type">
-                <div className="grid grid-cols-2 gap-2">
-                  {NODE_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={async () => {
-                        setNodeType(t.value);
-                        if (skill) await updateSkill(skill.id, {});
-                      }}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg font-medium cursor-pointer transition-all"
-                      style={{
-                        fontSize: '14px',
-                        background: nodeType === t.value
-                          ? `rgba(255,105,180,0.12)`
-                          : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${nodeType === t.value ? 'rgba(255,105,180,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                        color: nodeType === t.value ? 'var(--accent-primary)' : 'var(--text-muted)',
-                      }}
-                    >
-                      <span>{t.icon}</span>
-                      <span>{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </Field>
+            {/* Skill Name */}
+            <Field label="Skill Name">
+              <input
+                ref={titleRef}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={handleSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                style={inputStyle}
+                onFocus={(e) => applyFocusStyle(e.target as HTMLInputElement)}
+                onBlurCapture={(e) => applyBlurStyle(e.target as HTMLInputElement)}
+              />
+            </Field>
 
-              {/* Color */}
-              <Field label="Color">
-                <div className="flex flex-wrap gap-2">
-                  {SKILL_COLORS.map((c) => (
-                    <button
-                      key={c.value}
-                      onClick={async () => {
-                        setColor(c.value);
-                        if (skill) await updateSkill(skill.id, { color: c.value });
-                      }}
-                      title={c.name}
-                      className="w-7 h-7 rounded-full cursor-pointer transition-all"
-                      style={{
-                        background: c.value,
-                        boxShadow: color === c.value
-                          ? `0 0 14px ${c.value}, 0 0 0 2px rgba(255,255,255,0.2)`
-                          : 'none',
-                        transform: color === c.value ? 'scale(1.2)' : 'scale(1)',
-                      }}
-                    />
-                  ))}
-                </div>
-              </Field>
-
-              {/* Description */}
-              <Field label="Description">
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={handleSave}
-                  rows={3}
-                  placeholder="What is this skill about?"
-                  className="w-full px-4 py-3 rounded-xl outline-none resize-none transition-all"
-                  style={{
-                    fontSize: '14px',
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = 'rgba(255,105,180,0.4)'; }}
-                  onBlurCapture={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-                />
-              </Field>
-
-              {/* ── Timeline / Journal ───────────────────── */}
-              <div>
-                <label className="block font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-                  Activity Log
-                </label>
-
-                {/* New note input */}
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                    placeholder="Add a note… (Enter to save)"
-                    className="flex-1 px-3 py-2.5 rounded-lg outline-none transition-all"
-                    style={{
-                      fontSize: '14px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: 'var(--text-primary)',
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = 'rgba(255,105,180,0.3)'; }}
-                    onBlurCapture={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-                  />
+            {/* Type pills — 2×2 grid */}
+            <Field label="Type">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-2)' }}>
+                {NODE_TYPES.map((t) => (
                   <button
-                    onClick={handleAddNote}
-                    disabled={!note.trim()}
-                    className="px-3 py-2.5 rounded-lg cursor-pointer transition-all"
+                    key={t.value}
+                    onClick={async () => {
+                      setNodeType(t.value);
+                      if (skill) await updateSkill(skill.id, {});
+                    }}
                     style={{
-                      fontSize: '14px',
-                      background: note.trim() ? 'rgba(255,105,180,0.15)' : 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,105,180,0.2)',
-                      color: note.trim() ? 'var(--accent-primary)' : 'var(--text-ghost)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--sp-2)',
+                      padding: 'var(--sp-2) var(--sp-4)',
+                      borderRadius: 'var(--r-full)',
+                      border: `1px solid ${nodeType === t.value ? 'var(--pink)' : 'var(--border)'}`,
+                      background: nodeType === t.value ? 'var(--pink-dim)' : 'var(--surface)',
+                      color: nodeType === t.value ? 'var(--pink)' : 'var(--text-secondary)',
+                      fontWeight: nodeType === t.value ? 'var(--fw-medium)' : 'var(--fw-normal)',
+                      fontSize: 'var(--text-sm)',
+                      transition: 'all var(--t-base) var(--ease)',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (nodeType !== t.value) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (nodeType !== t.value) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
                     }}
                   >
-                    Log
+                    <span>{t.icon}</span>
+                    <span>{t.label}</span>
                   </button>
-                </div>
+                ))}
+              </div>
+            </Field>
 
-                {/* Events list */}
-                <div className="flex flex-col gap-2">
-                  {events.length === 0 ? (
-                    <p className="text-xs" style={{ color: 'var(--text-ghost)' }}>No activity yet.</p>
-                  ) : (
-                    events.map((evt) => (
-                      <motion.div
-                        key={evt.id}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="px-3 py-2 rounded-lg"
-                        style={{
-                          background: 'rgba(255,255,255,0.03)',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                        }}
-                      >
-                        <p className="text-xs mb-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {new Date(evt.timestamp).toLocaleString()}
-                        </p>
-                        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{evt.content}</p>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
+            {/* Colour swatches */}
+            <Field label="Color">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)' }}>
+                {SKILL_COLORS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={async () => {
+                      setColor(c.value);
+                      if (skill) await updateSkill(skill.id, { color: c.value });
+                    }}
+                    title={c.name}
+                    style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: c.value,
+                      cursor: 'pointer',
+                      transition: 'all var(--t-base) var(--ease)',
+                      outline: color === c.value ? '2px solid #fff' : 'none',
+                      outlineOffset: color === c.value ? '2px' : '0px',
+                      transform: color === c.value ? 'scale(1.15)' : 'scale(1)',
+                      border: 'none',
+                    }}
+                  />
+                ))}
+              </div>
+            </Field>
+
+            {/* Description */}
+            <Field label="Description">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={handleSave}
+                placeholder="What is this skill about?"
+                rows={3}
+                style={{ ...inputStyle, minHeight: 90, resize: 'vertical' }}
+                onFocus={(e) => applyFocusStyle(e.target as HTMLTextAreaElement)}
+                onBlurCapture={(e) => applyBlurStyle(e.target as HTMLTextAreaElement)}
+              />
+            </Field>
+
+            {/* Activity Log */}
+            <div>
+              <SectionLabel>Activity Log</SectionLabel>
+
+              {/* Note input row */}
+              <div style={{ display: 'flex', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)' }}>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                  placeholder="Add a note… (Enter to save)"
+                  style={{ ...inputStyle, flex: 1, height: 36, padding: 'var(--sp-2) var(--sp-3)' }}
+                  onFocus={(e) => applyFocusStyle(e.target as HTMLInputElement)}
+                  onBlurCapture={(e) => applyBlurStyle(e.target as HTMLInputElement)}
+                />
+                <button
+                  onClick={handleAddNote}
+                  disabled={!note.trim()}
+                  style={{
+                    height: 36,
+                    padding: '0 14px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
+                    color: note.trim() ? 'var(--pink)' : 'var(--text-muted)',
+                    fontSize: 'var(--text-sm)',
+                    transition: 'all var(--t-base) var(--ease)',
+                    cursor: note.trim() ? 'pointer' : 'default',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (note.trim()) (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
+                  }}
+                >
+                  Log
+                </button>
+              </div>
+
+              {/* Events */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {events.length === 0 ? (
+                  <p style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-muted)',
+                    fontStyle: 'italic',
+                    textAlign: 'center',
+                    padding: 'var(--sp-4) 0',
+                  }}>
+                    No activity yet.
+                  </p>
+                ) : (
+                  events.map((evt) => (
+                    <motion.div
+                      key={evt.id}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{
+                        padding: 'var(--sp-2) 0',
+                        borderBottom: '1px solid var(--border)',
+                      }}
+                    >
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 2 }}>
+                        {new Date(evt.timestamp).toLocaleString()}
+                      </p>
+                      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                        {evt.content}
+                      </p>
+                    </motion.div>
+                  ))
+                )}
               </div>
             </div>
+          </div>
 
-            {/* ── Footer ──────────────────────────────────── */}
-            <div
-              className="px-6 py-4 flex items-center justify-between"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-            >
+          {/* ── Footer ───────────────────────────────────── */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 'var(--sp-5) var(--sp-6)',
+            borderTop: '1px solid var(--border)',
+            marginTop: 'auto',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
               {skill.nodeType !== 'root' && (
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
-                  style={{ fontSize: '14px', color: 'rgba(251,113,133,0.6)', border: '1px solid rgba(251,113,133,0.1)' }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#fb7185'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(251,113,133,0.6)'; }}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: '#E24B4A',
+                    background: 'transparent',
+                    border: '1px solid rgba(226,75,74,0.3)',
+                    borderRadius: 'var(--r-md)',
+                    padding: 'var(--sp-2) var(--sp-4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all var(--t-base) var(--ease)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(226,75,74,0.1)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="3 6 5 6 21 6" />
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   </svg>
                   Delete
                 </button>
               )}
-
               {saving && (
-                <span className="text-xs" style={{ color: 'var(--text-ghost)' }}>Saving…</span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Saving…
+                </span>
               )}
-
-              <button
-                onClick={handleSave}
-                className="px-5 py-2.5 rounded-lg font-semibold cursor-pointer transition-all"
-                style={{
-                  fontSize: '14px',
-                  minHeight: '40px',
-                  background: 'linear-gradient(135deg, #ff69b4, #c44b8b)',
-                  color: '#fff',
-                  boxShadow: '0 0 16px rgba(255,105,180,0.2)',
-                }}
-              >
-                Save
-              </button>
             </div>
-          </motion.div>
-        </>
+
+            <button
+              onClick={handleSave}
+              style={{
+                height: 40,
+                padding: '0 var(--sp-6)',
+                background: 'var(--pink)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 'var(--r-full)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--fw-medium)',
+                boxShadow: 'var(--pink-glow)',
+                transition: 'all var(--t-base) var(--ease)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.filter = 'none';
+                (e.currentTarget as HTMLElement).style.transform = 'none';
+              }}
+            >
+              Save
+            </button>
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
 }
 
-/* ── Helper ──────────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────── */
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--r-md)',
+  padding: 'var(--sp-3) var(--sp-4)',
+  fontSize: 'var(--text-base)',
+  color: 'var(--text-primary)',
+  outline: 'none',
+  transition: 'border-color var(--t-fast), box-shadow var(--t-fast)',
+};
+
+function applyFocusStyle(el: HTMLInputElement | HTMLTextAreaElement) {
+  el.style.borderColor = 'var(--pink)';
+  el.style.boxShadow = '0 0 0 3px var(--pink-dim)';
+}
+function applyBlurStyle(el: HTMLInputElement | HTMLTextAreaElement) {
+  el.style.borderColor = 'var(--border)';
+  el.style.boxShadow = 'none';
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{
+      fontSize: 'var(--text-xs)',
+      fontWeight: 'var(--fw-bold)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase',
+      color: 'var(--text-muted)',
+      marginBottom: 'var(--sp-2)',
+    }}>
+      {children}
+    </p>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-        {label}
-      </label>
+      <SectionLabel>{label}</SectionLabel>
       {children}
     </div>
   );

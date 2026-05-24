@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════════════════════
+   SKILLPULSE — Design Tokens
+   Single source of truth. Import before all other styles.
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Palette ──────────────────────────────────────── */
+  --void:        #09090f;
+  --void-2:      #0f0f18;
+  --void-3:      #161622;
+  --surface:     rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.07);
+  --border:      rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.15);
+
+  --pink:        #e0407b;
+  --pink-dim:    rgba(224,64,123,0.18);
+  --pink-glow:   0 0 28px rgba(224,64,123,0.35);
+  --cyan:        #22d3b8;
+  --cyan-dim:    rgba(34,211,184,0.15);
+  --cyan-glow:   0 0 22px rgba(34,211,184,0.3);
+
+  --text-primary:   #f0eef8;
+  --text-secondary: rgba(240,238,248,0.55);
+  --text-muted:     rgba(240,238,248,0.3);
+
+  /* ── Typography Scale ─────────────────────────────── */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 15px;
+  --text-md:   17px;
+  --text-lg:   21px;
+  --text-xl:   28px;
+  --text-2xl:  36px;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-bold:   600;
+  --font: 'Inter', 'DM Sans', system-ui, sans-serif;
+
+  /* ── Spacing Scale ────────────────────────────────── */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;
+  --sp-4: 16px;  --sp-5: 20px;  --sp-6: 24px;
+  --sp-8: 32px;  --sp-10: 40px; --sp-12: 48px;
+
+  /* ── Radii ────────────────────────────────────────── */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+  --r-xl:   22px;
+  --r-full: 9999px;
+
+  /* ── Transitions ──────────────────────────────────── */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 360ms;
+
+  /* ── Node Sizing — fluid ──────────────────────────── */
+  --node-r:          clamp(44px, 5.5vw, 72px);
+  --node-font:       clamp(11px, 1.2vw, 14px);
+  --node-root-r:     clamp(56px, 7vw, 90px);
+  --node-root-font:  clamp(13px, 1.5vw, 17px);
+
+  /* ── Z-Index Layers ───────────────────────────────── */
+  --z-particles: 0;
+  --z-graph:     1;
+  --z-topbar:    15;
+  --z-sidebar:   20;
+  --z-modal:     50;
+}
+
+/* ── Global Reset ─────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: var(--void);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(224,64,123,0.2);
+  border-radius: var(--r-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(224,64,123,0.35);
+}
+
+/* ── React Flow Overrides ─────────────────────────────── */
+.react-flow__renderer { background: transparent !important; }
+.react-flow__background { display: none !important; }
+.react-flow__edge { pointer-events: none; }
+.react-flow__handle {
+  opacity: 0;
+  width: 10px;
+  height: 10px;
+  border: none;
+  background: var(--pink);
+  transition: opacity var(--t-base) var(--ease);
+}
+.react-flow__node:hover .react-flow__handle { opacity: 0.5; }
+.react-flow__controls { display: none; }
+.react-flow__attribution { display: none !important; }
+.react-flow__minimap { display: none; }
+
+/* ── Keyframes ────────────────────────────────────────── */
+@keyframes rotate-ring {
+  from { transform: scale(1.25) rotate(0deg); }
+  to   { transform: scale(1.25) rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.05); }
+}
+
+@keyframes neural-pulse {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -300; }
+}

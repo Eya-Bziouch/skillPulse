@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   ProjectCard — Minimal futuristic project card
-   for the dashboard
+   ProjectCard — Glass surface project card
    ═══════════════════════════════════════════════════════ */
 
 import { useState } from 'react';
@@ -28,98 +27,101 @@ function timeAgo(ts: number): string {
 
 export default function ProjectCard({ project, onDelete, index }: Props) {
   const navigate = useNavigate();
-  const [showDelete, setShowDelete] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: [0, 0, 0.2, 1] }}
-      className="group relative rounded-2xl cursor-pointer transition-all duration-300"
-      style={{
-        background: 'linear-gradient(145deg, rgba(26,26,46,0.6), rgba(17,17,32,0.8))',
-        border: '1px solid rgba(255,255,255,0.05)',
-      }}
+      transition={{ duration: 0.4, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
       onClick={() => navigate(`/project/${project.id}`)}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
-      whileHover={{
-        borderColor: 'rgba(255,105,180,0.25)',
-        boxShadow: '0 0 40px rgba(255,105,180,0.06), 0 8px 32px rgba(0,0,0,0.3)',
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%',
+        maxWidth: 320,
+        background: hovered ? 'var(--surface-hover)' : 'var(--surface)',
+        border: `1px solid ${hovered ? 'var(--border-strong)' : 'var(--border)'}`,
+        borderRadius: 'var(--r-lg)',
+        padding: 'var(--sp-5) var(--sp-6)',
+        cursor: 'pointer',
+        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+        boxShadow: hovered ? '0 8px 32px rgba(0,0,0,0.35)' : 'none',
+        transition: 'all var(--t-base) var(--ease)',
+        position: 'relative',
       }}
     >
-      {/* Glow accent top-bar */}
-      <div
-        className="absolute top-0 left-6 right-6 h-px"
-        style={{
-          background: 'linear-gradient(90deg, transparent, rgba(255,105,180,0.3), transparent)',
-          opacity: 0,
-          transition: 'opacity 0.3s',
-        }}
-        ref={(el) => {
-          if (el) {
-            el.parentElement?.addEventListener('mouseenter', () => { el.style.opacity = '1'; });
-            el.parentElement?.addEventListener('mouseleave', () => { el.style.opacity = '0'; });
-          }
-        }}
-      />
-
-      <div className="p-6">
-        {/* Title row */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Living dot */}
-            <motion.div
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{
-                background: 'var(--accent-primary)',
-                boxShadow: '0 0 8px var(--accent-glow)',
-              }}
-              animate={{ opacity: [0.5, 1, 0.5], scale: [0.85, 1.1, 0.85] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <h3
-              className="font-display text-base font-semibold truncate"
-              style={{ color: 'var(--text-primary)' }}
-            >
-              {project.name}
-            </h3>
-          </div>
-
-          {/* Delete button */}
-          <motion.button
-            initial={false}
-            animate={{ opacity: showDelete ? 0.5 : 0, scale: showDelete ? 1 : 0.8 }}
-            whileHover={{ opacity: 1, scale: 1.1 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm('Delete this project and all its skills?')) {
-                onDelete(project.id);
-              }
-            }}
-            className="p-1.5 rounded-lg flex-shrink-0 cursor-pointer"
-            style={{ color: 'var(--text-muted)' }}
-            title="Delete project"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </motion.button>
-        </div>
-
-        {/* Description */}
-        {project.description && (
-          <p className="text-xs mb-4 line-clamp-2" style={{ color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            {project.description}
-          </p>
-        )}
-
-        {/* Footer meta */}
-        <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--text-ghost)' }}>
-          <span>{timeAgo(project.updatedAt)}</span>
-        </div>
+      {/* Row 1: dot + project name + delete */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: 'var(--sp-2)' }}>
+        <motion.div
+          style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: 'var(--pink)',
+            boxShadow: '0 0 8px rgba(224,64,123,0.5)',
+            flexShrink: 0,
+          }}
+          animate={{ opacity: [0.5, 1, 0.5], scale: [0.85, 1.1, 0.85] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <h3 style={{
+          fontSize: 'var(--text-md)',
+          fontWeight: 'var(--fw-medium)',
+          color: 'var(--text-primary)',
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {project.name}
+        </h3>
+        {/* Delete */}
+        <motion.button
+          initial={false}
+          animate={{ opacity: hovered ? 0.5 : 0, scale: hovered ? 1 : 0.8 }}
+          whileHover={{ opacity: 1, scale: 1.1 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm('Delete this project and all its skills?')) onDelete(project.id);
+          }}
+          style={{
+            flexShrink: 0,
+            width: 24, height: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-muted)',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: 'var(--r-sm)',
+            cursor: 'pointer',
+          }}
+          title="Delete project"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </motion.button>
       </div>
+
+      {/* Row 2: description */}
+      {project.description && (
+        <p style={{
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.5,
+          marginBottom: 'var(--sp-4)',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
+          {project.description}
+        </p>
+      )}
+
+      {/* Row 3: timestamp */}
+      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: project.description ? 0 : 'var(--sp-4)' }}>
+        {timeAgo(project.updatedAt)}
+      </p>
     </motion.div>
   );
 }
